@@ -8,103 +8,48 @@ const app = new express();
 // Configure middleware --------------------------
 
 // Controllers -----------------------------------
-const modulesController = async (req, res) => {
-  const id = req.params.id; // Undefined in the case of the /api/modules endpoint
-  // Build SQL
-  const table = '(Modules LEFT JOIN Users ON Modules.ModuleLeaderID=Users.UserID)';
-  const whereField = 'ModuleID';
-  const fields = ['ModuleID', 'ModuleName', 'ModuleCode', 'ModuleLevel', 'ModuleYearID', 'ModuleLeaderID', 'ModuleImageURL', 'CONCAT(UserFirstname," ",UserLastname) AS ModuleLeaderName'];
-  const extendedTable = `${table}`;
-  const extendedFields = `${fields}`;
-  let sql = `SELECT ${extendedFields} FROM ${extendedTable}`;
-  if (id) sql += ` WHERE ${whereField}=${id}`;
-  // Execute query
-  let isSuccess = false;
-  let message = "";
-  let result = null;
-  try {
-    [result] = await database.query(sql);
-    if (result.length === 0) message = 'No record(s) found';
-    else {
-      isSuccess = true;
-      message = 'Record(s) successfully recovered';
-    }
-  }
-  catch (error) {
-    message = `Failed to execute query: ${error.message}`;
-  }
-  // Responses
-  isSuccess
-    ? res.status(200).json(result)
-    : res.status(400).json({ message });
-};
 
-const modulesOfLeaderController = async (req, res) => {
-  const id = req.params.id; 
-  // Build SQL
-  const table = '(Modules LEFT JOIN Users ON Modules.ModuleLeaderID=Users.UserID)';
-  const whereField = 'ModuleLeaderID';
-  const fields = ['ModuleID', 'ModuleName', 'ModuleCode', 'ModuleLevel', 'ModuleYearID', 'ModuleLeaderID', 'ModuleImageURL', 'CONCAT(UserFirstname," ",UserLastname) AS ModuleLeaderName'];
-  const extendedTable = `${table}`;
-  const extendedFields = `${fields}`;
-  const sql = `SELECT ${extendedFields} FROM ${extendedTable} WHERE ${whereField}=${id}`;
-  // Execute query
-  let isSuccess = false;
-  let message = "";
-  let result = null;
-  try {
-    [result] = await database.query(sql);
-    if (result.length === 0) message = 'No record(s) found';
-    else {
-      isSuccess = true;
-      message = 'Record(s) successfully recovered';
-    }
+const buildReadSql = (whereField, id, isUsersExtended) => {
+  let table = '((Modules LEFT JOIN Users ON ModuleLeaderID=UserID) LEFT JOIN Years ON ModuleYearID=YearID )';
+  let fields = ['ModuleID', 'ModuleName', 'ModuleCode', 'ModuleLevel', 'ModuleYearID', 'ModuleLeaderID', 'ModuleImageURL', 'CONCAT(UserFirstname," ",UserLastname) AS ModuleLeaderName'];
+  if (isUsersExtended) {
+    table = `Modulemembers INNER JOIN ${table} ON Modulemembers.ModulememberModuleID=Modules.ModuleID`;
   }
-  catch (error) {
-    message = `Failed to execute query: ${error.message}`;
-  }
-  // Responses
-  isSuccess
-    ? res.status(200).json(result)
-    : res.status(400).json({ message });
-};
+  let sql = `SELECT ${fields} FROM ${table}`;
+  if(id) sql += ` WHERE ${whereField}=${id}`; 
+  
+  return sql;
+}
 
-const modulesOfUserController = async (req, res) => {
-  const id = req.params.id; 
-  // Build SQL
-  const table = '(Modules LEFT JOIN Users ON Modules.ModuleLeaderID=Users.UserID)';
-  const whereField = 'Modulemembers.ModulememberUserID';
-  const fields = ['ModuleID', 'ModuleName', 'ModuleCode', 'ModuleLevel', 'ModuleYearID', 'ModuleLeaderID', 'ModuleImageURL', 'CONCAT(UserFirstname," ",UserLastname) AS ModuleLeaderName'];
-  const extendedTable = `Modulemembers INNER JOIN ${table} ON Modulemembers.ModulememberModuleID=Modules.ModuleID`;
-  const extendedFields = `${fields}`;
-  const sql = `SELECT ${extendedFields} FROM ${extendedTable} WHERE ${whereField}=${id}`;
-  // Execute query
-  let isSuccess = false;
-  let message = "";
-  let result = null;
+const read = async (whereField, id, isUsersExtended) => {
+  const sql = buildReadSql(whereField, id, isUsersExtended);
   try {
-    [result] = await database.query(sql);
-    if (result.length === 0) message = 'No record(s) found';
-    else {
-      isSuccess = true;
-      message = 'Record(s) successfully recovered';
-    }
+    const [result] = await database.query(sql);
+    return (result.length === 0)
+      ? { isSuccess: false, result: null,  message: 'No record(s) found' }
+      : { isSuccess: true, result: result, message: 'Record(s) successfully recovered' };
   }
   catch (error) {
-    message = `Failed to execute query: ${error.message}`;
+    return { isSuccess: false, result: null, message: `Failed to execute query: ${error.message}` };
   }
-  // Responses
-  isSuccess
-    ? res.status(200).json(result)
-    : res.status(400).json({ message });
+}
+
+const modulesController = async (res, whereField, id, isUsersExtended) => {
+  // Validate request
+
+  // Access data
+  const { isSuccess, result, message: accessorMessage } = await read(whereField, id, isUsersExtended);
+  if (!isSuccess) return res.status(400).json({ message: accessorMessage });
+  
+  // Response to request
+  res.status(200).json(result);
 };
 
 // Endpoints -------------------------------------
-app.get('/api/modules', modulesController);
-app.get('/api/modules/:id', modulesController);
-app.get('/api/modules/leader/:id', modulesOfLeaderController);
-app.get('/api/modules/users/:id', modulesOfUserController);
-
+app.get('/api/modules', (req,res) => modulesController(res,null,null,false));
+app.get('/api/modules/:id', (req,res) => modulesController(res,"ModuleID",req.params.id,false));
+app.get('/api/modules/leader/:id', (req,res) => modulesController(res,"ModuleLeaderID",req.params.id,false));
+app.get('/api/modules/users/:id', (req,res) => modulesController(res,"ModulememberUserID",req.params.id,true));
 
 // Start server ----------------------------------
 const PORT = process.env.PORT || 5000;
