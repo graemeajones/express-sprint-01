@@ -55,7 +55,7 @@ const modulesController = async (res, whereField, id, isUsersExtended) => {
 
 const buildUsersSelectSql = (whereField, id, isGroupsExtended) => {
   let table = '((Users LEFT JOIN Usertypes ON UserUsertypeID=UsertypeID) LEFT JOIN Years ON UserYearID=YearID )';
-  let fields = ['UserID', 'UserFirstname', 'UserLastname', 'UserLevel', 'UserYearID', 'UserUsertypeID', 'UserImageURL', 'UsertypeName AS UserUsertypeName', 'YearName AS UserYearName'];
+  let fields = ['UserID', 'UserFirstname', 'UserLastname', 'UserEmail', 'UserLevel', 'UserYearID', 'UserUsertypeID', 'UserImageURL', 'UsertypeName AS UserUsertypeName', 'YearName AS UserYearName'];
   if (isGroupsExtended) {
     table = `Groupmembers INNER JOIN ${table} ON Groupmembers.GroupmemberUserID=Users.UserID`;
   }
