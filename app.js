@@ -92,7 +92,7 @@ const usersController = async (res, whereField, id, isGroupsExtended) => {
 // Endpoints -------------------------------------
 // Modules
 app.get('/api/modules', (req, res) => modulesController(res, null, null, false));
-app.get('/api/modules/:id(\d+)', (req, res) => modulesController(res, "ModuleID", req.params.id, false));
+app.get('/api/modules/:id(\\d+)', (req, res) => modulesController(res, "ModuleID", req.params.id, false));
 app.get('/api/modules/leader/:id', (req, res) => modulesController(res, "ModuleLeaderID", req.params.id, false));
 app.get('/api/modules/users/:id', (req, res) => modulesController(res, "ModulememberUserID", req.params.id, true));
 
@@ -100,7 +100,7 @@ app.get('/api/modules/users/:id', (req, res) => modulesController(res, "Moduleme
 const STAFF = 1;
 const STUDENT = 2;
 app.get('/api/users', (req, res) => usersController(res, null, null, false));
-app.get('/api/users/:id(\d+)', (req, res) => usersController(res, "UserID", req.params.id, false));
+app.get('/api/users/:id(\\d+)', (req, res) => usersController(res, "UserID", req.params.id, false));
 app.get('/api/users/student', (req, res) => usersController(res, "UsertypeID", STUDENT, false));
 app.get('/api/users/staff', (req, res) => usersController(res, "UsertypeID", STAFF, false));
 
