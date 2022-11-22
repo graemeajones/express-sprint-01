@@ -16,93 +16,203 @@ app.use(function (req, res, next) {
 app.use(cors({ origin: '*' }));
 
 // Controllers -----------------------------------
-
-const buildModulesSelectSql = (whereField, id, isUsersExtended) => {
-  let table = '((Modules LEFT JOIN Users ON ModuleLeaderID=UserID) LEFT JOIN Years ON ModuleYearID=YearID )';
-  let fields = ['ModuleID', 'ModuleName', 'ModuleCode', 'ModuleLevel', 'ModuleYearID', 'ModuleLeaderID', 'ModuleImageURL', 'CONCAT(UserFirstname," ",UserLastname) AS ModuleLeaderName', 'YearName AS ModuleYearName'];
-  if (isUsersExtended) {
-    table = `Modulemembers INNER JOIN ${table} ON Modulemembers.ModulememberModuleID=Modules.ModuleID`;
-  }
-  let sql = `SELECT ${fields} FROM ${table}`;
+const modulesController = async (req, res) => {
+  const id = req.params.id; // Undefined in the case of the /api/modules endpoint
+  // Build SQL
+  const table = '((Modules LEFT JOIN Users ON ModuleLeaderID=UserID) LEFT JOIN Years ON ModuleYearID=YearID )';
+  const whereField = 'ModuleID';
+  const fields = ['ModuleID', 'ModuleName', 'ModuleCode', 'ModuleLevel', 'ModuleYearID', 'ModuleLeaderID', 'ModuleImageURL', 'CONCAT(UserFirstname," ",UserLastname) AS ModuleLeaderName', 'YearName AS ModuleYearName'];
+  const extendedTable = `${table}`;
+  const extendedFields = `${fields}`;
+  let sql = `SELECT ${extendedFields} FROM ${extendedTable}`;
   if (id) sql += ` WHERE ${whereField}=${id}`;
-  
-  return sql;
-};
-
-const readModules = async (whereField, id, isUsersExtended) => {
-  const sql = buildModulesSelectSql(whereField, id, isUsersExtended);
+  // Execute query
+  let isSuccess = false;
+  let message = "";
+  let result = null;
   try {
-    const [result] = await database.query(sql);
-    return (result.length === 0)
-      ? { isSuccess: false, result: null, message: 'No record(s) found' }
-      : { isSuccess: true, result: result, message: 'Record(s) successfully recovered' };
+    [result] = await database.query(sql);
+    if (result.length === 0) message = 'No record(s) found';
+    else {
+      isSuccess = true;
+      message = 'Record(s) successfully recovered';
+    }
   }
   catch (error) {
-    return { isSuccess: false, result: null, message: `Failed to execute query: ${error.message}` };
+    message = `Failed to execute query: ${error.message}`;
   }
-};
+  // Responses
+  isSuccess
+    ? res.status(200).json(result)
+    : res.status(404).json({ message });
+}
 
-const modulesController = async (res, whereField, id, isUsersExtended) => {
-  // Validate request
-
-  // Access data
-  const { isSuccess, result, message: accessorMessage } = await readModules(whereField, id, isUsersExtended);
-  if (!isSuccess) return res.status(400).json({ message: accessorMessage });
-  
-  // Response to request
-  res.status(200).json(result);
-};
-
-const buildUsersSelectSql = (whereField, id, isGroupsExtended) => {
-  let table = '((Users LEFT JOIN Usertypes ON UserUsertypeID=UsertypeID) LEFT JOIN Years ON UserYearID=YearID )';
-  let fields = ['UserID', 'UserFirstname', 'UserLastname', 'UserEmail', 'UserLevel', 'UserYearID', 'UserUsertypeID', 'UserImageURL', 'UsertypeName AS UserUsertypeName', 'YearName AS UserYearName'];
-  if (isGroupsExtended) {
-    table = `Groupmembers INNER JOIN ${table} ON Groupmembers.GroupmemberUserID=Users.UserID`;
-  }
-  let sql = `SELECT ${fields} FROM ${table}`;
-  if (id) sql += ` WHERE ${whereField}=${id}`;
-
-  return sql;
-};
-
-const readUsers = async (whereField, id, isGroupsExtended) => {
-  const sql = buildUsersSelectSql(whereField, id, isGroupsExtended);
+const modulesOfLeaderController = async (req, res) => {
+  const id = req.params.id; 
+  // Build SQL
+  const table = '((Modules LEFT JOIN Users ON ModuleLeaderID=UserID) LEFT JOIN Years ON ModuleYearID=YearID )';
+  const whereField = 'ModuleLeaderID';
+  const fields = ['ModuleID', 'ModuleName', 'ModuleCode', 'ModuleLevel', 'ModuleYearID', 'ModuleLeaderID', 'ModuleImageURL', 'CONCAT(UserFirstname," ",UserLastname) AS ModuleLeaderName', 'YearName AS ModuleYearName'];
+  const extendedTable = `${table}`;
+  const extendedFields = `${fields}`;
+  const sql = `SELECT ${extendedFields} FROM ${extendedTable} WHERE ${whereField}=${id}`;
+  // Execute query
+  let isSuccess = false;
+  let message = "";
+  let result = null;
   try {
-    const [result] = await database.query(sql);
-    return (result.length === 0)
-      ? { isSuccess: false, result: null, message: 'No record(s) found' }
-      : { isSuccess: true, result: result, message: 'Record(s) successfully recovered' };
+    [result] = await database.query(sql);
+    if (result.length === 0) message = 'No record(s) found';
+    else {
+      isSuccess = true;
+      message = 'Record(s) successfully recovered';
+    }
   }
   catch (error) {
-    return { isSuccess: false, result: null, message: `Failed to execute query: ${error.message}` };
+    message = `Failed to execute query: ${error.message}`;
   }
-};
+  // Responses
+  isSuccess
+    ? res.status(200).json(result)
+    : res.status(404).json({ message });
+}
 
-const usersController = async (res, whereField, id, isGroupsExtended) => {
-  // Validate request
+const modulesOfUsersController = async (req, res) => {
+  const id = req.params.id; 
+  // Build SQL
+  const table = '((Modules LEFT JOIN Users ON ModuleLeaderID=UserID) LEFT JOIN Years ON ModuleYearID=YearID )';
+  const whereField = 'ModulememberUserID';
+  const fields = ['ModuleID', 'ModuleName', 'ModuleCode', 'ModuleLevel', 'ModuleYearID', 'ModuleLeaderID', 'ModuleImageURL', 'CONCAT(UserFirstname," ",UserLastname) AS ModuleLeaderName', 'YearName AS ModuleYearName'];
+  const extendedTable = `Modulemembers INNER JOIN ${table} ON Modulemembers.ModulememberModuleID=Modules.ModuleID`;
+  const extendedFields = `${fields}`;
+  const sql = `SELECT ${extendedFields} FROM ${extendedTable} WHERE ${whereField}=${id}`;
+  // Execute query
+  let isSuccess = false;
+  let message = "";
+  let result = null;
+  try {
+    [result] = await database.query(sql);
+    if (result.length === 0) message = 'No record(s) found';
+    else {
+      isSuccess = true;
+      message = 'Record(s) successfully recovered';
+    }
+  }
+  catch (error) {
+    message = `Failed to execute query: ${error.message}`;
+  }
+  // Responses
+  isSuccess
+    ? res.status(200).json(result)
+    : res.status(404).json({ message });
+}
 
-  // Access data
-  const { isSuccess, result, message: accessorMessage } = await readUsers(whereField, id, isGroupsExtended);
-  if (!isSuccess) return res.status(400).json({ message: accessorMessage });
-  
-  // Response to request
-  res.status(200).json(result);
-};
+
+const usersController = async (req, res) => {
+  const id = req.params.id; // Undefined in the case of the /api/users endpoint
+  // Build SQL
+  const table = '((Users LEFT JOIN Usertypes ON UserUsertypeID=UsertypeID) LEFT JOIN Years ON UserYearID=YearID )';
+  const whereField = 'UserID';
+  const fields = ['UserID', 'UserFirstname', 'UserLastname', 'UserEmail', 'UserLevel', 'UserYearID', 'UserUsertypeID', 'UserImageURL', 'UsertypeName AS UserUsertypeName', 'YearName AS UserYearName'];
+  const extendedTable = `${table}`;
+  const extendedFields = `${fields}`;
+  let sql = `SELECT ${extendedFields} FROM ${extendedTable}`;
+  if (id) sql += ` WHERE ${whereField}=${id}`;
+  // Execute query
+  let isSuccess = false;
+  let message = "";
+  let result = null;
+  try {
+    [result] = await database.query(sql);
+    if (result.length === 0) message = 'No record(s) found';
+    else {
+      isSuccess = true;
+      message = 'Record(s) successfully recovered';
+    }
+  }
+  catch (error) {
+    message = `Failed to execute query: ${error.message}`;
+  }
+  // Responses
+  isSuccess
+    ? res.status(200).json(result)
+    : res.status(404).json({ message });
+}
+
+const usersStudentController = async (req, res) => {
+  // Build SQL
+  const id = 2; // STUDENT Usertype ID
+  const table = '((Users LEFT JOIN Usertypes ON UserUsertypeID=UsertypeID) LEFT JOIN Years ON UserYearID=YearID )';
+  const whereField = 'UserUsertypeID';
+  const fields = ['UserID', 'UserFirstname', 'UserLastname', 'UserEmail', 'UserLevel', 'UserYearID', 'UserUsertypeID', 'UserImageURL', 'UsertypeName AS UserUsertypeName', 'YearName AS UserYearName'];
+  const extendedTable = `${table}`;
+  const extendedFields = `${fields}`;
+  let sql = `SELECT ${extendedFields} FROM ${extendedTable}`;
+  if (id) sql += ` WHERE ${whereField}=${id}`;
+  // Execute query
+  let isSuccess = false;
+  let message = "";
+  let result = null;
+  try {
+    [result] = await database.query(sql);
+    if (result.length === 0) message = 'No record(s) found';
+    else {
+      isSuccess = true;
+      message = 'Record(s) successfully recovered';
+    }
+  }
+  catch (error) {
+    message = `Failed to execute query: ${error.message}`;
+  }
+  // Responses
+  isSuccess
+    ? res.status(200).json(result)
+    : res.status(404).json({ message });
+}
+
+const usersStaffController = async (req, res) => {
+  // Build SQL
+  const id = 1; // STAFF Usertype ID
+  const table = '((Users LEFT JOIN Usertypes ON UserUsertypeID=UsertypeID) LEFT JOIN Years ON UserYearID=YearID )';
+  const whereField = 'UserUsertypeID';
+  const fields = ['UserID', 'UserFirstname', 'UserLastname', 'UserEmail', 'UserLevel', 'UserYearID', 'UserUsertypeID', 'UserImageURL', 'UsertypeName AS UserUsertypeName', 'YearName AS UserYearName'];
+  const extendedTable = `${table}`;
+  const extendedFields = `${fields}`;
+  let sql = `SELECT ${extendedFields} FROM ${extendedTable}`;
+  if (id) sql += ` WHERE ${whereField}=${id}`;
+  // Execute query
+  let isSuccess = false;
+  let message = "";
+  let result = null;
+  try {
+    [result] = await database.query(sql);
+    if (result.length === 0) message = 'No record(s) found';
+    else {
+      isSuccess = true;
+      message = 'Record(s) successfully recovered';
+    }
+  }
+  catch (error) {
+    message = `Failed to execute query: ${error.message}`;
+  }
+  // Responses
+  isSuccess
+    ? res.status(200).json(result)
+    : res.status(404).json({ message });
+}
 
 // Endpoints -------------------------------------
 // Modules
-app.get('/api/modules', (req, res) => modulesController(res, null, null, false));
-app.get('/api/modules/:id(\\d+)', (req, res) => modulesController(res, "ModuleID", req.params.id, false));
-app.get('/api/modules/leader/:id', (req, res) => modulesController(res, "ModuleLeaderID", req.params.id, false));
-app.get('/api/modules/users/:id', (req, res) => modulesController(res, "ModulememberUserID", req.params.id, true));
+app.get('/api/modules', modulesController);
+app.get('/api/modules/:id(\\d+)', modulesController);
+app.get('/api/modules/leader/:id', modulesOfLeaderController);
+app.get('/api/modules/users/:id', modulesOfUsersController);
 
 // Users
-const STAFF = 1;
-const STUDENT = 2;
-app.get('/api/users', (req, res) => usersController(res, null, null, false));
-app.get('/api/users/:id(\\d+)', (req, res) => usersController(res, "UserID", req.params.id, false));
-app.get('/api/users/student', (req, res) => usersController(res, "UsertypeID", STUDENT, false));
-app.get('/api/users/staff', (req, res) => usersController(res, "UsertypeID", STAFF, false));
+app.get('/api/users', usersController);
+app.get('/api/users/:id(\\d+)', usersController);
+app.get('/api/users/student', usersStudentController);
+app.get('/api/users/staff', usersStaffController);
 
 // Start server ----------------------------------
 const PORT = process.env.PORT || 5000;
